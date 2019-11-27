@@ -3,7 +3,6 @@
 %%%Implementazione predicato is_regexp(RE)
 %%%Caso di un simbolo
 is_regexp(RE) :-
-    %write("atomo"),
     atomic(RE).
 
 %%%Caso di una funzione con un simbolo
@@ -11,34 +10,30 @@ is_regexp(RE) :-
     nonvar(RE),
     RE =.. [Funz, Simb],
     controllo_funz(Funz),
-    %write("singolo"),
     is_regexp(Simb).
 
 %%%Caso di una funzione con più simboli
 is_regexp(RE) :-
     nonvar(RE),
     RE =.. [Funz | Simb],
-    %write("doppio"),
     controllo_funz(Funz),
     controllo_simb(Simb).
 
 %%%Controllo che la funzione sia accettata
 controllo_funz(Funz):-
-    term_string(Funz, A),
-    (A="seq";
-    A="or";
-    A="plus";
-    A="star").
+    term_string(Funz, StringFunz),
+    (StringFunz="seq";
+    StringFunz="or";
+    StringFunz="plus";
+    StringFunz="star").
 
 %%%Caso base sul controllo del simbolo
 controllo_simb([]).
 
-%%%Controllo cosa sia il simbolo(se atomo o funzione)
+%%%Controllo ogni simbolo della funzione(se atomo o funzione)
 controllo_simb([X|Xs]):-
-    %write(X),
-    %write(" "),
     is_regexp(X),
     controllo_simb(Xs).
 
 %%%Implementazione predicato nfa_regexp_comp(FA_Id, RE)
-nfa_regexp_comp(X, Y) :- is_regexp(Y), assert(X, Y).
+%%%nfa_regexp_comp(FA_Id, RE).
