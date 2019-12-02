@@ -35,5 +35,187 @@ controllo_simb([X|Xs]):-
     is_regexp(X),
     controllo_simb(Xs).
 
+nfa_clear() :-
+    abolish(nfa_initial/2),
+    abolish(nfa_final/2),
+    abolish(nfa_delta/4).
+
+nfa_clear(FA_Id) :-
+    abolish(nfa_initial(FA_Id, _)),
+    abolish(nfa_final(FA_Id, _)),
+    abolish(nfa_delta(FA_Id, _, _, _)).
+
+nfa_list() :-
+    listing(nfa_initial/2),
+    listing(nfa_final/2),
+    listing(nfa_delta/4).
+
+nfa_list(FA_Id) :-
+    listing(nfa_initial(FA_Id, _)),
+    listing(nfa_final(FA_Id, _)),
+    listing(nfa_delta(FA_Id, _, _, _)).
+
+
+
 %%%Implementazione predicato nfa_regexp_comp(FA_Id, RE)
-%%%nfa_regexp_comp(FA_Id, RE).
+nfa_regexp_comp(FA_Id, RE) :-
+    is_regexp(RE),
+    ID =.. [FA_Id],
+    write(ID),
+    gensym(q, Ini),
+    assertz(nfa_initial(FA_Id, Ini)),
+    gensym(q, Fin),
+    assertz(nfa_final(FA_Id, Fin)),
+    %gensym(q, Delta).
+    %assertz(nfa_delta(FA_Id, RE, Delta)).
+    creazione(RE, ID, Ini, Fin).
+
+creazione(RE, FA_Id, Ini, Fin) :-
+    (RE =.. [Funz, Simb];
+    RE =.. [Funz | Simb]),
+    write(Funz),
+    write(" "),
+    write(Simb),
+    term_string(Funz, StringFunz),
+    StringFunz="seq",
+    controllo_simb_seq(Simb, FA_Id, Ini, Fin).
+
+creazione(RE, FA_Id, Ini, Fin) :-
+    (RE =.. [Funz, Simb];
+    RE =.. [Funz | Simb]),
+    write(Funz),
+    write(" "),
+    write(Simb),
+    term_string(Funz, StringFunz),
+    StringFunz="or",
+    controllo_simb_or(Simb, FA_Id, Ini, Fin).
+
+creazione(RE, FA_Id, Ini, Fin) :-
+    (RE =.. [Funz, Simb];
+    RE =.. [Funz | Simb]),
+    write(Funz),
+    write(" "),
+    write(Simb),
+    term_string(Funz, StringFunz),
+    StringFunz="star",
+    controllo_simb_star(Simb, FA_Id, Ini, Fin).
+
+creazione(RE, FA_Id, Ini, Fin) :-
+    (RE =.. [Funz, Simb];
+    RE =.. [Funz | Simb]),
+    write(Funz),
+    write(" "),
+    write(Simb),
+    term_string(Funz, StringFunz),
+    StringFunz="plus",
+    controllo_simb_plus(Simb, FA_Id, Ini, Fin).
+
+
+controllo_simb_seq([], _, _, _).
+
+controllo_simb_seq([Simb], FA_Id, Ini, Fin):-
+    write("sono seq"),
+    gensym(q, Inizio),
+    gensym(q, Fine),
+    assertz(nfa_delta(FA_Id, Inizio, Simb, Fine)),
+    assertz(nfa_delta(FA_Id, Ini, epsilon, Inizio)),
+    assertz(nfa_delta(FA_Id, Fine, epsilon,Fin)).
+
+controllo_simb_seq([Simb | Simbs], FA_Id, Ini, Fin):-
+    gensym(q, Inizio),
+    gensym(q, Fine),
+    assertz(nfa_delta(FA_Id, Inizio, Simb, Fine)),
+    assertz(nfa_delta(FA_Id, Ini, epsilon, Inizio)),
+    controllo_simb_seq(Simbs, FA_Id, Fine, Fin).
+
+controllo_simb_or([], _, _, _).
+
+controllo_simb_or([Simb], FA_Id, Ini, Fin):-
+    write("sono or"),
+    gensym(q, Inizio),
+    gensym(q, Fine),
+    assertz(nfa_delta(FA_Id, Inizio, Simb, Fine)),
+    assertz(nfa_delta(FA_Id, Ini, epsilon, Inizio)),
+    assertz(nfa_delta(FA_Id, Fine, epsilon,Fin)).
+
+controllo_simb_or([Simb | Simbs], FA_Id, Ini, Fin):-
+    gensym(q, Inizio),
+    gensym(q, Fine),
+    assertz(nfa_delta(FA_Id, Inizio, Simb, Fine)),
+    assertz(nfa_delta(FA_Id, Ini, epsilon, Inizio)),
+    assertz(nfa_delta(FA_Id, Fine, epsilon, Fin)),
+    controllo_simb_or(Simbs, FA_Id, Ini, Fin).
+
+controllo_simb_star([], _, _, _).
+
+controllo_simb_star([Simb], FA_Id, Ini, Fin):-
+    gensym(q, Inizio),
+    gensym(q, Fine),
+    assertz(nfa_delta(FA_Id, Inizio, Simb, Fine)),
+    assertz(nfa_delta(FA_Id, Ini, epsilon, Inizio)),
+    assertz(nfa_delta(FA_Id, Fine, epsilon,Fin)),
+    assertz(nfa_delta(FA_Id, Fine, epsilon,Inizio)),
+    assertz(nfa_delta(FA_Id, Ini, epsilon,Fin)).
+
+controllo_simb_plus([], _, _, _).
+
+controllo_simb_plus([Simb], FA_Id, Ini, Fin):-
+    gensym(q, Inizio),
+    gensym(q, Fine),
+    assertz(nfa_delta(FA_Id, Inizio, Simb, Fine)),
+    assertz(nfa_delta(FA_Id, Ini, epsilon, Inizio)),
+    assertz(nfa_delta(FA_Id, Fine, epsilon,Fin)),
+    assertz(nfa_delta(FA_Id, Fine, epsilon,Inizio)).
+
+scelta_funz_iniz(RE, ID) :-
+    nonvar(RE),
+    write(ID),
+    (RE =.. [Funz, Simb];
+    RE =.. [Funz | Simb]),
+    term_string(Funz, StringFunz),
+    (StringFunz="seq", controllo_seq(Simb);
+    StringFunz="or", controllo_or(Simb);
+    StringFunz="plus", controllo_plus(Simb);
+    StringFunz="star", controllo_star(Simb)).
+    %creazione_delta(Simb)).
+
+scelta_funz(RE, ID) :-
+    nonvar(RE),
+    (RE =.. [Funz, Simb];
+    RE =.. [Funz | Simb]),
+    term_string(Funz, StringFunz),
+    (StringFunz="seq", controllo_seq(Simb,ID);
+    StringFunz="or", controllo_or(Simb);
+    StringFunz="plus", controllo_plus(Simb);
+    StringFunz="star", controllo_star(Simb)).
+    %creazione_delta(Simb)).
+
+initial_seq(_ ,ID):-
+    append(ID).
+
+controllo_seq([]).
+
+controllo_seq([Simb]) :-
+    write(" controllo seq 1 "),
+    write(Simb),
+    scelta_funz(Simb).
+
+controllo_seq([Simb | Simbs]) :-
+    write(" controllo seq 2 "),
+    write(Simb),
+    controllo_seq(Simbs).
+
+controllo_or(Simb) :-
+    write(" controllo or "),
+    write(Simb).
+
+controllo_plus(Simb) :-
+    write(" controllo plus "),
+    write(Simb).
+
+controllo_star(RE) :-
+    write(" controllo star "),
+    write(RE).
+
+creazione_delta(_) :-
+    write(" sono in creazione delta").
