@@ -1,97 +1,106 @@
 %%%%Progetto Espressioni Regolari
 
 %%%Implementazione predicato is_regexp(RE)
-%%%Caso di un simbolo
-is_regexp(RE) :-
-    atomic(RE).
+%%%Caso di star con arietà 1
+is_regexp(star()):- !.
 
-is_regexp(star()).
+%%%Caso dove RE è un atomo
+is_regexp(RE):-
+    atomic(RE), !.
 
-is_regexp(RE) :-
+%%%Caso di una RE valida
+is_regexp(RE):-
     RE=.. [Funz | Simb],
-    controllo_funz(Funz, Simb).
+    controllo_re(Funz, Simb), !.
 
-%%%Caso seq
-controllo_funz(seq, Simb):-
-    Simb = [X | Xs],
-    controllo_funz(X, Xs).
+%%%Caso dove RE è una lista vuota
+controllo_re([], _).
 
-%%%Caso or
-controllo_funz(or, Simb):-
-    Simb = [X | Xs],
-    controllo_funz(X, Xs).
-
-%%%Caso star
-controllo_funz(star, Simb):-
-    Simb = [X | Xs],!,
-    Xs=[],
-    X=.. [X1 |X2],
-    controllo_funz(X1, X2).
-
-%%%Caso plus
-controllo_funz(plus, Simb):-
-    Simb = [X | Xs],!,
-    Xs=[],
-    X=.. [X1 |X2],
-    controllo_funz(X1, X2).
-
-%%%Caso compound
-controllo_funz(Funz, Simb):-
-    compound(Funz),
-    Simb=[X | Xs],
-    controllo_funz(X, Xs).
-
-%%Caso atomic
-controllo_funz([], _).
-
-
-controllo_funz(Atom, []):-
+%%%Caso ultimo elemento di RE sia atomic
+controllo_re(Atom, []):-
     atomic(Atom).
 
-controllo_funz(Atom, Simb):-
+%%%Caso primo elemento di RE sia atomic
+controllo_re(Atom, Simb):-
     atomic(Atom),
     Simb = [X | Xs],
-    controllo_funz(X, Xs).
+    controllo_re(X, Xs).
 
-controllo_funz(Funz, Simb):-
+%%%Caso seq RE
+controllo_re(seq, Simb):-
+    Simb = [X | Xs],
+    controllo_re(X, Xs).
+
+%%%Caso or RE
+controllo_re(or, Simb):-
+    Simb = [X | Xs],
+    controllo_re(X, Xs).
+
+%%%Caso star RE
+controllo_re(star, Simb):-
+    Simb = [X | Xs],
+    Xs=[],
+    X=.. [X1 |X2],
+    controllo_re(X1, X2).
+
+%%%Caso plus RE
+controllo_re(plus, Simb):-
+    Simb = [X | Xs],
+    Xs=[],
+    X=.. [X1 |X2],
+    controllo_re(X1, X2).
+
+%%%Caso compound RE
+controllo_re(Funz, []):-
+    writeln("controllo 1"),
+    compound(Funz), !.
+    /**writeln("controllo 3"),
+    Funz =.. [X | Xs],
+    controllo_re(X, Xs).*/
+
+controllo_re(Funz, Simb):-
+    writeln("controllo 2"),
+    compound(Funz),
+    Simb=[X | Xs],
+    controllo_re(X, Xs).
+
+/**controllo_re(Funz, Simb):-
+    writeln("controllo 2"),
     Funz =.. [X | Xs],
     Simb = [Y | Ys],
-    controllo_funz(X, Xs),
-    controllo_funz(Y, Ys).
-
-controllo_funz(Funz, []):-
-    Funz =.. [X | Xs],
-    write("ciao3 "),
-    controllo_funz(X, Xs).
+    controllo_re(X, Xs),
+    controllo_re(Y, Ys).*/
 
 %%%Rimuovo dalla base di dati tutti gli automi definiti
 nfa_clear() :-
     abolish(nfa_initial/2),
     abolish(nfa_final/2),
-    abolish(nfa_delta/4).
+    abolish(nfa_delta/4),
+    abolish(fa_id/1), !.
 
 %%%Rimuovo dalla base di dati l'automa FA_Id
 nfa_clear(FA_Id) :-
     retractall(nfa_initial(FA_Id, _)),
     retractall(nfa_final(FA_Id, _)),
-    retractall(nfa_delta(FA_Id, _, _, _)).
+    retractall(nfa_delta(FA_Id, _, _, _)),
+    retractall(fa_id(FA_Id)), !.
 
 %%%Listo tutti gli automi definiti nella base di dati
 nfa_list() :-
     listing(nfa_initial/2),
     listing(nfa_final/2),
-    listing(nfa_delta/4).
+    listing(nfa_delta/4), !.
 
 %%%Listo l'automa FA_Id definito nella base di dati
 nfa_list(FA_Id) :-
     listing(nfa_initial(FA_Id, _)),
     listing(nfa_final(FA_Id, _)),
-    listing(nfa_delta(FA_Id, _, _, _)).
+    listing(nfa_delta(FA_Id, _, _, _)), !.
 
 %%%Verifico che l'input sia consumato dall'automa FA_Id
 nfa_test(FA_Id, Input) :-
     nfa_initial(FA_Id, Start),
-    accept(FA_Id, Input, Start).
+    accept(FA_Id, Input, Start), !.
 
 accept(FA_Id, [], End) :-
     nfa_final(FA_Id, End).
@@ -105,13 +114,19 @@ accept(FA_Id, I, Start) :-
     accept(FA_Id, I, End).
 
 %%%Implementazione predicato nfa_regexp_comp(FA_Id, RE)
+nfa_regexp_comp(FA_Id, _) :-
+    clause(fa_id(FA_Id), _),
+    writeln("FA_Id già usato, usare un altro ID"), !.
+
 nfa_regexp_comp(FA_Id, RE) :-
+    is_regexp(RE),
+    assertz(fa_id(FA_Id)),
     gensym(q, Start),
     assertz(nfa_initial(FA_Id, Start)),
     gensym(q, End),
     assertz(nfa_final(FA_Id, End)),
     RE =.. [Funz | Simb],
-    nfa_compilazione(FA_Id, Funz, Simb, Start, End).
+    nfa_compilazione(FA_Id, Funz, Simb, Start, End), !.
 
 nfa_compilazione(FA_Id, Simb, [], Start, End) :-
     atomic(Simb),
@@ -155,8 +170,10 @@ nfa_compilazione(FA_Id, or, Simb, Start, End) :-
 nfa_compilazione(FA_Id, star, Simb, Start, End) :-
     Simb=[X],
     X=..[X1|X2],
-    nfa_compilazione(FA_Id, X1, X2, Start, End),
-    assertz(nfa_delta(FA_Id, End, epsilon, Start)),
+    gensym(q, Passaggio),
+    nfa_compilazione(FA_Id, X1, X2, Start, Passaggio),
+    assertz(nfa_delta(FA_Id, Passaggio, epsilon, End)),
+    assertz(nfa_delta(FA_Id, Passaggio, epsilon, Start)),
     assertz(nfa_delta(FA_Id, Start, epsilon, End)).
 
 nfa_compilazione(FA_Id, plus, Simb, Start, End) :-
@@ -165,6 +182,7 @@ nfa_compilazione(FA_Id, plus, Simb, Start, End) :-
     nfa_compilazione(FA_Id, X1, X2, Start, End),
     assertz(nfa_delta(FA_Id, End, epsilon, Start)).
 
+%%%Caso di compound
 nfa_compilazione(FA_Id, Funz, Simb, Start, End) :-
     X=..[Funz | Simb],
-    assertz(nfa_delta(FA_Id, Start, X, End)),!.
+    assertz(nfa_delta(FA_Id, Start, X, End)).
