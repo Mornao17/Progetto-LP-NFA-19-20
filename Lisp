@@ -1,7 +1,22 @@
+;;;; Progetto NFA Cantoni Romano
+
+;;;Funzione is-regexp
 (defun is-regexp(RE)
   (cond
    ((atom RE) T)
-   ((eql (first RE) 'seq) (is-regexp (rest RE)))
-   ((eql (first RE) 'or) (is-regexp (rest RE)))
-   ((eql (first RE) 'star) (if (null (rest(rest RE))) (is-regexp (rest RE)) NIL))
-   (T (is-regexp (rest RE)))))
+   ((eql (first RE) 'seq)
+    (is-regexp (rest RE)))
+   ((eql (first RE) 'or)
+    (is-regexp (rest RE)))
+   ((eql (first RE) 'star) 
+    (if (null (rest(first(rest RE))))
+        (is-regexp (rest RE)) NIL))
+   ((eql (first RE) 'plus) 
+    (if (null (rest(first(rest RE)))) 
+        (is-regexp (rest RE)) NIL))
+   (T (is-regexp (rest RE)))
+  )
+)
+
+
+ 
