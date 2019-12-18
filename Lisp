@@ -5,18 +5,36 @@
   (cond
    ((atom RE) T)
    ((eql (first RE) 'seq)
-    (is-regexp (rest RE)))
+    (regexp (rest RE)))
    ((eql (first RE) 'or)
-    (is-regexp (rest RE)))
+    (regexp (rest RE)))
    ((eql (first RE) 'star) 
-    (if (null (rest(first(rest RE))))
-        (is-regexp (rest RE)) NIL))
+    (if (null (rest(rest RE)))
+        (regexp (rest RE)) NIL))
    ((eql (first RE) 'plus) 
-    (if (null (rest(first(rest RE)))) 
-        (is-regexp (rest RE)) NIL))
-   (T (is-regexp (rest RE)))
+    (if (null (rest(rest RE))) 
+        (regexp (rest RE)) NIL))
+   (T(if (listp RE)T))
   )
 )
 
+;;appoggio a is-regexp
+;;seq/star/or/plus riconosciuto
+(defun regexp(RE) 
+  (cond
+   ((or(atom RE) (listp RE)) T)
+   ((eql (first RE) 'seq)
+    (regexp (rest RE)))
+   ((eql (first RE) 'or)
+    (regexp (rest RE)))
+   ((eql (first RE) 'star) 
+    (if (null (rest(rest RE)))
+        (regexp (rest RE)) NIL))
+   ((eql (first RE) 'plus) 
+    (if (null (rest(rest RE))) 
+        (regexp (rest RE)) NIL))
+   (T(is-regexp (rest RE)))
+  )
+)
 
- 
+;;;Funzione nfa-regexp-comp
