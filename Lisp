@@ -1,1 +1,7 @@
-
+(defun is-regexp(RE)
+  (cond
+   ((atom RE) T)
+   ((eql (first RE) 'seq) (is-regexp (rest RE)))
+   ((eql (first RE) 'or) (is-regexp (rest RE)))
+   ((eql (first RE) 'star) (if (null (rest(rest RE))) (is-regexp (rest RE)) NIL))
+   (T (is-regexp (rest RE)))))
