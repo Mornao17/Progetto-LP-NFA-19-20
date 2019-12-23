@@ -38,3 +38,38 @@
 )
 
 ;;;Funzione nfa-regexp-comp
+
+(defun nfa-regexp-comp (RE)
+  ;(is-regexp (RE))
+  (cond
+   ((eql (first RE) 'seq)
+    (nfa-seq (rest RE) 0))
+   ((eql (first RE) 'or)
+   (nfa-or(rest re) 0))
+   )
+)
+
+;;atomo
+(defun nfa-atom (ini re fin)
+  (list  ini re  fin))
+
+;;epsilon  mossa
+(defun nfa-epsilon (ini fin)
+  (list ini 'epsilon fin))
+
+;;creazione seq
+(defun nfa-seq (RE a)
+  (cond (( eql (rest re) nil) 
+         (list(nfa-atom a (first re) -1)))
+        ((atom (first RE))
+         (append (list (nfa-epsilon a (+ a 1)))
+                 (list(list (+ a 1) (first RE) (+ a 2)))
+                       (nfa-seq  (rest RE) (+ a 2))))))
+
+;;creazione or
+(defun nfa-or (re a)
+  (append (list (nfa-epsilon 0 (+ a 1)))
+          (list (nfa-atom (+ a 1) (first re) (+ a 2)))
+          (list(nfa-epsilon (+ a 2) -1))
+          (if (not (eql (rest re) nil))
+              (nfa-or (rest re) (+ a 2)))))
