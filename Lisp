@@ -87,7 +87,7 @@
 
 ;;creazione or
 (defun nfa-or (re a)
-  (append (list (nfa-epsilon 0 (+ a 1)))
+  (append (list (nfa-epsilon a (+ a 1)))
           (list (nfa-atom (+ a 1) (first re) (+ a 2)))
           (list(nfa-epsilon (+ a 2) -1))
           (if (not (eql (rest re) nil))
@@ -95,5 +95,11 @@
 
 ;;creazione star
 (defun nfa-star(RE a)
-  
-  )
+  (append (list (nfa-epsilon a (+ a 1)))
+          (list (nfa-epsilon a -1))
+          (list (nfa-epsilon -1 a))
+          (list( nfa-atom (+ a 1) (first re) (+ a 2)))
+          (list( nfa-atom (+ a 2) (first re) (+ a 1)))
+          (list (nfa-epsilon (+ a 1) (+ a 2)))
+          (list(nfa-epsilon (+ a 2) -1)))
+)
