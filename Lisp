@@ -46,9 +46,22 @@
     (nfa-seq (rest RE) 0))
    ((eql (first RE) 'or)
    (nfa-or(rest re) 0))
+   ((eql (first RE) 'star)
+    (nfa-star(rest RE) 0))
    )
 )
 
+;;ricorsione comp
+(defun nfa-comp (RE i)
+  ;(is-regexp (RE))
+  (cond
+   ((eql (first RE) 'seq)
+    (list '(start 0))
+    (nfa-seq (rest RE) (+ i 1)))
+   ((eql (first RE) 'or)
+   (nfa-or(rest re) (+ i 1)))
+   )
+)
 ;;atomo
 (defun nfa-atom (ini re fin)
   (list  ini re  fin))
@@ -57,10 +70,16 @@
 (defun nfa-epsilon (ini fin)
   (list ini 'epsilon fin))
 
+;;stato finale
+(defun nfa-final (ini )
+  (list ini 'epsilon -1))
+
 ;;creazione seq
 (defun nfa-seq (RE a)
-  (cond (( eql (rest re) nil) 
-         (list(nfa-atom a (first re) -1)))
+  (cond (( eql re nil) 
+         (list(nfa-final a)))
+        ((or(eql (first(first re)) 'or) (eql (first re) 'seq) (eql (first re) 'star) (eql(first re) 'plus));ritorno alla funzione comp se trovo un funtore accettato
+         (nfa-comp RE a))
         ((atom (first RE))
          (append (list (nfa-epsilon a (+ a 1)))
                  (list(list (+ a 1) (first RE) (+ a 2)))
@@ -73,3 +92,8 @@
           (list(nfa-epsilon (+ a 2) -1))
           (if (not (eql (rest re) nil))
               (nfa-or (rest re) (+ a 2)))))
+
+;;creazione star
+(defun nfa-star(RE a)
+  
+  )
