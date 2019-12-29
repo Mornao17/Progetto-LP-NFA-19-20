@@ -48,6 +48,8 @@
    (nfa-or(rest re) 0))
    ((eql (first RE) 'star)
     (nfa-star(rest RE) 0))
+   ((eql (first RE) 'plus)
+    (nfa-plus(rest RE) 0))
    )
 )
 
@@ -60,6 +62,10 @@
     (nfa-seq (rest RE) (+ i 1)))
    ((eql (first RE) 'or)
    (nfa-or(rest re) (+ i 1)))
+   ((eql (first RE) 'star)
+   (nfa-star(rest re) (+ i 1)))
+   ((eql (first RE) 'plus)
+   (nfa-plus(rest re) (+ i 1)))
    )
 )
 ;;atomo
@@ -78,7 +84,11 @@
 (defun nfa-seq (RE a)
   (cond (( eql re nil) 
          (list(nfa-final a)))
-        ((or(eql (first(first re)) 'or) (eql (first re) 'seq) (eql (first re) 'star) (eql(first re) 'plus));ritorno alla funzione comp se trovo un funtore accettato
+        ((or  ;ritorno alla funzione comp se trovo un funtore accettato
+          (eql (first(first re)) 'or) 
+          (eql (first re) 'seq) 
+          (eql (first re) 'star) 
+          (eql(first re) 'plus))
          (nfa-comp RE a))
         ((atom (first RE))
          (append (list (nfa-epsilon a (+ a 1)))
@@ -103,3 +113,13 @@
           (list (nfa-epsilon (+ a 1) (+ a 2)))
           (list(nfa-epsilon (+ a 2) -1)))
 )
+
+;;creazione plus
+(defun nfa-plus(RE a)
+  (append (list (nfa-epsilon a (+ a 1)))
+          (list (nfa-epsilon -1 a))
+          (list( nfa-atom (+ a 1) (first re) (+ a 2)))
+          (list( nfa-atom (+ a 2) (first re) (+ a 1)))
+          (list(nfa-epsilon (+ a 2) -1)))
+)
+
