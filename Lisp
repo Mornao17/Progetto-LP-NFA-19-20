@@ -57,8 +57,7 @@
 (defun nfa-comp (RE i)
   ;(is-regexp (RE))
   (cond
-   ((eql (first RE) 'seq)
-    (list '(start 0))
+   ((eql (first (first RE)) 'seq)
     (nfa-seq (rest RE) (+ i 1)))
    ((eql (first RE) 'or)
    (nfa-or(rest re) (+ i 1)))
@@ -85,7 +84,7 @@
   (cond (( eql re nil) 
          (list(nfa-final a)))
         ((or  ;ritorno alla funzione comp se trovo un funtore accettato
-          (eql (first(first re)) 'or) 
+          (eql (first re) 'or) 
           (eql (first re) 'seq) 
           (eql (first re) 'star) 
           (eql(first re) 'plus))
