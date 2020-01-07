@@ -1,5 +1,6 @@
 ;;;; Progetto NFA Cantoni Romano
 
+
 ;;;Funzione is-regexp
 (defun is-regexp(RE)
   (cond
@@ -38,87 +39,187 @@
 )
 
 ;;;Funzione nfa-regexp-comp
-
 (defun nfa-regexp-comp (RE)
-  ;(is-regexp (RE))
   (cond
-   ((eql (first RE) 'seq)
-    (nfa-seq (rest RE) 0))
-   ((eql (first RE) 'or)
-   (nfa-or(rest re) 0))
-   ((eql (first RE) 'star)
-    (nfa-star(rest RE) 0))
-   ((eql (first RE) 'plus)
-    (nfa-plus(rest RE) 0))
-   )
-)
+   ;;se è un atomo creo l'automa
+   ((atom RE) 
+    (list '(initial 0) (list 'delta 0 RE -1) '(final -1)))
+   ;;no funotir accettati
+   ((and (not(eql(first re) 'star)) 
+              (not(eql(first re) 'seq)) 
+              (not(eql(first re) 'or)) 
+              (not(eql(first re) 'plus)))
+         (list '(initial 0) (list 'delta 0 re -1) '(final -1)))
+   ;;se è una regexp passo alla funzione per creare l'automa
+   ((is-regexp RE)
+    (append (list '(initial 0)) (nfa-comp RE nil 0 0)))))
 
 ;;ricorsione comp
-(defun nfa-comp (RE i)
-  ;(is-regexp (RE))
-  (cond
-   ((eql (first (first RE)) 'seq)
-    (nfa-seq (rest RE) (+ i 1)))
-   ((eql (first RE) 'or)
-   (nfa-or(rest re) (+ i 1)))
-   ((eql (first RE) 'star)
-   (nfa-star(rest re) (+ i 1)))
-   ((eql (first RE) 'plus)
-   (nfa-plus(rest re) (+ i 1)))
-   )
-)
+(defun nfa-comp (RE res ini fin)
+  (cond  
+   ((and(eql RE  nil)(eql res nil)) 
+    (append (list (nfa-epsilon ini -1))
+            (list(list 'final -1))))
+   ((and(eql re nil) (not(eql res nil))) '())
+   ((eql (first RE) 'seq) 
+    (nfa-seq (rest RE) res ini fin)) 
+   ((eql (first RE) 'or) 
+    (nfa-or (rest RE) res ini fin))
+   ((eql (first RE) 'star) 
+    (nfa-star (rest RE) res ini fin))
+   ((eql (first RE) 'plus) 
+    (nfa-plus (rest RE) res ini fin))))
+
+
+
+
+
+
+
 ;;atomo
-(defun nfa-atom (ini re fin)
-  (list  ini re  fin))
+(defun nfa-atom (RE s)
+  (list  s re (+ s 1)))
 
 ;;epsilon  mossa
 (defun nfa-epsilon (ini fin)
   (list ini 'epsilon fin))
 
-;;stato finale
-(defun nfa-final (ini )
-  (list ini 'epsilon -1))
+
 
 ;;creazione seq
-(defun nfa-seq (RE a)
-  (cond (( eql re nil) 
-         (list(nfa-final a)))
-        ((or  ;ritorno alla funzione comp se trovo un funtore accettato
-          (eql (first re) 'or) 
-          (eql (first re) 'seq) 
-          (eql (first re) 'star) 
-          (eql(first re) 'plus))
-         (nfa-comp RE a))
-        ((atom (first RE))
-         (append (list (nfa-epsilon a (+ a 1)))
-                 (list(list (+ a 1) (first RE) (+ a 2)))
-                       (nfa-seq  (rest RE) (+ a 2))))))
+(defun nfa-seq (RE res ini fin)
+  (cond ((and (eql RE nil) (eql res nil)) 
+         (append (list (nfa-epsilon ini (+ fin 1)))
+                 (nfa-comp RE res (+ fin 1) (+ fin 1))))
+        ((and (eql RE nil) (not(eql res nil))) 
+         (list (nfa-epsilon ini (+ fin 1))))
+        ((atom (first RE)) 
+         (append  (list (nfa-epsilon ini (+ fin 1))) 
+                  (list(nfa-atom  (first RE) (+ fin 1)))  
+                  (nfa-seq (rest re) res (+ fin 2) (+ fin 2))))
+        ((and(not(eql(first(first re)) 'star)) 
+             (not(eql(first(first re)) 'seq)) 
+             (not(eql(first(first re)) 'or)) 
+             (not(eql(first (first re)) 'plus)))
+         (append  (list(list ini 'epsilon (+ fin 1))) 
+                  (list(nfa-atom  (first RE) (+ fin 1)))  
+                  (nfa-seq (rest RE) res (+ fin 2) (+ fin 2))))
+        (T (append (nfa-comp  (first RE) 
+                                        (append '(c) (rest RE)) fin fin) 
+                   (nfa-seq (rest RE) res 
+                               (cond ((eql (first(first RE)) 'seq)
+                                      (+ ini (conta-stati(first RE))))
+                                     (T (+ ini 3))) 
+                               (+ fin (conta-stati (first RE))))))))
 
 ;;creazione or
-(defun nfa-or (re a)
-  (append (list (nfa-epsilon a (+ a 1)))
-          (list (nfa-atom (+ a 1) (first re) (+ a 2)))
-          (list(nfa-epsilon (+ a 2) -1))
-          (if (not (eql (rest re) nil))
-              (nfa-or (rest re) (+ a 2)))))
+(defun nfa-or (RE res ini fin)
+  (cond ((and(eql RE nil) (eql res nil)) (nfa-comp RE res (+ ini 3) fin))
+        ((and(eql RE nil) (not(eql res nil))) '())
+        ((atom (first RE)) 
+         (append(list (nfa-epsilon ini (+ fin 1)) 
+                      (nfa-epsilon (+ fin 2) (+ ini 3)) 
+                      (nfa-atom (first RE) (+ fin 1))) 
+                (nfa-or (rest RE) res ini (cond ((equal fin ini) (+ fin 3))
+                                                 (T (+ fin 2))))))
+        ((and(not(eql(first(first RE)) 'star)) 
+             (not(eql(first(first RE)) 'seq)) 
+             (not(eql(first(first RE)) 'or)) 
+             (not(eql(first (first RE)) 'plus)))
+         (append(list (nfa-epsilon ini (+ fin 1)) 
+                      (nfa-epsilon (+ fin 2) (+ ini 3)) 
+                      (nfa-atom (first RE) (+ fin 1))) 
+                (nfa-or (rest RE) res ini (+ fin 3))))
+        (T(append (list(list  (cond((eql (first(first RE)) 'seq)
+                                          (+ fin (conta-stati(first RE))))
+                                         (T (+ fin 3))) 'epsilon (+ ini 3)))
+                  (nfa-comp (first RE) 
+                                      (append '(c) (rest RE)) 
+                                       ini  
+                                       fin )
+                  (nfa-or (rest RE) res ini 
+                             (+ fin (conta-stati (first RE))))))))
+
 
 ;;creazione star
-(defun nfa-star(RE a)
-  (append (list (nfa-epsilon a (+ a 1)))
-          (list (nfa-epsilon a -1))
-          (list (nfa-epsilon -1 a))
-          (list( nfa-atom (+ a 1) (first re) (+ a 2)))
-          (list( nfa-atom (+ a 2) (first re) (+ a 1)))
-          (list (nfa-epsilon (+ a 1) (+ a 2)))
-          (list(nfa-epsilon (+ a 2) -1)))
-)
+(defun nfa-star (RE res ini fin)
+  (cond ((and(eql RE nil) (eql res nil)) 
+         (nfa-comp RE res (+ ini 3) fin))
+        ((and(eql RE nil) (not(eql res nil))) '())
+        ((atom (first RE)) 
+         (append (list (nfa-epsilon ini (+ fin 1))) 
+                 (list (nfa-epsilon (+ fin 2) (+ ini 3))) 
+                 (list (nfa-epsilon ini (+ ini 3)))
+                 (list (nfa-epsilon (+ fin 2) (+ fin 1))) 
+                 (list (nfa-atom (first RE) (+ fin 1)))
+                 (nfa-star (rest RE) res ini (+ ini 3))))
+        ((and(not(eql(first(first RE)) 'star)) 
+             (not(eql(first(first RE)) 'seq)) 
+             (not(eql(first(first RE)) 'or)) 
+             (not(eql(first (first RE)) 'plus)))
+         (append (list (nfa-epsilon ini (+ fin 1))) 
+                 (list (nfa-epsilon (+ fin 2) (+ ini 3))) 
+                 (list (nfa-epsilon ini (+ ini 3))) 
+                 (list (nfa-epsilon (+ fin 2) (+ fin 1))) 
+                 (list (nfa-atom (first RE) (+ fin 1)))
+                 (nfa-star (rest RE) res ini (+ ini 3))))
+        (T(append (list (nfa-epsilon ini (+ fin 1))) 
+                  (list (nfa-epsilon ini (+ ini 3))) 
+                  (list(list (cond((eql (first(first RE)) 'seq)
+                                          (+ (+ fin 1) (conta-stati(first RE))))
+                                         (T (+ fin 4))) 'epsilon (+ ini 3)))
+                  (list(list (cond((eql (first(first RE)) 'seq)
+                                          (+ (+ fin 1) (conta-stati(first RE))))
+                                         (T (+ fin 4))) 'epsilon (+ fin 1)))
+                  (nfa-comp (first RE) (append '(c) (rest RE)) (+ fin 1) (+ fin 1))
+                  (nfa-star (rest RE) res ini (+ fin (conta-stati (first RE))))))))
+
 
 ;;creazione plus
-(defun nfa-plus(RE a)
-  (append (list (nfa-epsilon a (+ a 1)))
-          (list (nfa-epsilon -1 a))
-          (list( nfa-atom (+ a 1) (first re) (+ a 2)))
-          (list( nfa-atom (+ a 2) (first re) (+ a 1)))
-          (list(nfa-epsilon (+ a 2) -1)))
-)
+(defun nfa-plus (RE res ini fin)
+  (cond ((and(eql RE nil) (eql res nil)) 
+         (nfa-comp RE res (+ ini 3) fin))
+        ((and(eql RE nil) (not(eql res nil))) '())
+        ((atom (first RE)) 
+         (append (list (nfa-epsilon ini (+ fin 1))) 
+                 (list (nfa-epsilon (+ fin 2) (+ ini 3)))  
+                 (list (nfa-epsilon (+ fin 2) (+ fin 1))) 
+                 (list(nfa-atom (first RE) (+ fin 1)))
+                 (nfa-plus (rest RE) res ini (+ ini 3))))
+        ((and(not(eql(first(first RE)) 'star)) 
+             (not(eql(first(first RE)) 'seq)) 
+             (not(eql(first(first RE)) 'or)) 
+             (not(eql(first (first RE)) 'plus)))
+         (append (list (nfa-epsilon ini (+ fin 1))) 
+                 (list (nfa-epsilon (+ fin 2) (+ ini 3)))  
+                 (list (nfa-epsilon (+ fin 2) (+ fin 1))) 
+                 (list(nfa-atom (first RE) (+ fin 1)))
+                 (nfa-plus (rest RE) res ini (+ ini 3))))
+        (T(append (list (nfa-epsilon ini (+ fin 1))) 
+                  (list(list (cond((eql (first(first RE)) 'seq)
+                                          (+ (+ fin 1) (conta-stati(first RE))))
+                                         (T (+ fin 4))) 'epsilon (+ ini 3)))
+                  (list(list (cond((eql (first(first RE)) 'seq)
+                                          (+ (+ fin 1) (conta-stati(first RE))))
+                                         (T (+ fin 4))) 'epsilon (+ fin 1)))
+                  (nfa-comp (first RE) (append '(c) (rest RE)) (+ fin 1) (+ fin 1))
+                  (nfa-plus (rest RE) res ini (+ fin (conta-stati (first RE))))))))
 
+         
+
+
+;;conteggio stati 
+(defun conta-stati (RE)
+  (cond ((eql RE nil) 0)
+        ((and (atom RE) (not(eql RE 'seq)) (not (eql RE 'or)) (not (eql RE 'star)) (not (eql RE 'plus ))) 2)
+        ((and(eql (first RE) 'seq)(eql(rest RE) nil))1)
+        ((and(eql (first RE) 'or)(eql(rest RE) nil))1)
+        ((and(atom (first RE))(eql (rest RE) nil)) 2)
+        ((eql (first RE) 'seq)  (+ (conta-stati (first (rest RE))) (conta-stati (append '(seq)(rest (rest RE))))))
+        ((eql (first RE) 'or)  (+ (conta-stati (first (rest RE))) (conta-stati (append '(or) (rest (rest RE))))))
+        ((and (eql (first RE) 'star) (atom (second RE))) 3)
+        ((eql (first RE) 'star) (+ (conta-stati (first (rest RE))) 2))
+        ((and (eql (first RE) 'plus) (atom (second RE))) 3)
+        ((eql (first RE) 'plus) (+ (conta-stati (first (rest RE))) 2))))
+                            
+        
