@@ -1,4 +1,5 @@
-;;;; Progetto NFA Cantoni Romano
+;;;;Cantoni Matteo 808104
+;;;;Romano Matteo 807442
 
 
 ;;;Funzione is-regexp
@@ -19,7 +20,7 @@
   )
 )
 
-;;appoggio a is-regexp
+;;;appoggio a is-regexp
 ;;seq/star/or/plus riconosciuto
 (defun regexp(RE) 
   (cond
@@ -54,49 +55,49 @@
    ((is-regexp RE)
     (append (list '(initial 0)) (nfa-comp RE nil 0 0)))))
 
-;;ricorsione comp
-(defun nfa-comp (RE res ini fin)
+;;;ricorsione comp
+(defun nfa-comp (RE escape ini fin)
   (cond  
   	;;caso base, lista vuota
-   ((and(eql RE  nil)(eql res nil)) 
+   ((and(eql RE  nil)(eql escape nil)) 
     (append (list (nfa-epsilon ini -1))
             (list(list 'final -1))))
-   ;;carattere per uscire dalla ricorsione, nella creazione delle parti di automa viene aggiunta una c come carattere di escape per entrare in questa funzione
-   ((and(eql RE nil) (not(eql res nil))) '())
+   ;;carattere per uscire dalla ricorsione, nella creazione delle parti di automa viene aggiunta una x come carattere di escape per entrare dentro questa funzione
+   ((and(eql RE nil) (not(eql escape nil))) '())
    ;;riconosciuta seq
    ((eql (first RE) 'seq) 
-    (nfa-seq (rest RE) res ini fin)) 
+    (nfa-seq (rest RE) escape ini fin)) 
    ;;riconosciuto or
    ((eql (first RE) 'or) 
-    (nfa-or (rest RE) res ini fin))
+    (nfa-or (rest RE) escape ini fin))
    ;;riconosciuto star
    ((eql (first RE) 'star) 
-    (nfa-star (rest RE) res ini fin))
+    (nfa-star (rest RE) escape ini fin))
    ;;riconosciuto plus
    ((eql (first RE) 'plus) 
-    (nfa-plus (rest RE) res ini fin))))
+    (nfa-plus (rest RE) escape ini fin))))
 
-;;creazione automa atomo
+;;;creazione automa atomo
 (defun nfa-atom (RE s)
   (list  'delta s re (+ s 1)))
 
-;;epsilon  mossa
+;;;epsilon  mossa
 (defun nfa-epsilon (ini fin)
   (list 'delta ini 'epsilon fin))
 
-;;creazione seq
-(defun nfa-seq (RE res ini fin)
-  (cond ((and (eql RE nil) (eql res nil)) 
+;;;creazione seq
+(defun nfa-seq (RE escape ini fin)
+  (cond ((and (eql RE nil) (eql escape nil)) 
          (append (list (nfa-epsilon ini (+ fin 1)))
-                 (nfa-comp RE res (+ fin 1) (+ fin 1))))
+                 (nfa-comp RE escape (+ fin 1) (+ fin 1))))
         ;;epsilon mossa
-        ((and (eql RE nil) (not(eql res nil))) 
+        ((and (eql RE nil) (not(eql escape nil))) 
          (list (nfa-epsilon ini (+ fin 1))))
         ;;riconosciuto atomo, creazione parte di automa 
         ((atom (first RE)) 
          (append  (list (nfa-epsilon ini (+ fin 1))) 
                   (list(nfa-atom  (first RE) (+ fin 1)))  
-                  (nfa-seq (rest re) res (+ fin 2) (+ fin 2))))
+                  (nfa-seq (rest re) escape (+ fin 2) (+ fin 2))))
         ;;creazione parte di automa
         ((and(not(eql(first(first re)) 'star)) 
              (not(eql(first(first re)) 'seq)) 
@@ -104,28 +105,29 @@
              (not(eql(first (first re)) 'plus)))
          (append  (list(nfa-epsilon ini (+ fin 1))) 
                   (list(nfa-atom  (first RE) (+ fin 1)))  
-                  (nfa-seq (rest RE) res (+ fin 2) (+ fin 2))))
+                  (nfa-seq (rest RE) escape (+ fin 2) (+ fin 2))))
         ;;richiamo nfa-comp con il carattere di escape e proseguo con la seq
         (T (append (nfa-comp  (first RE) 
-                                        (append '(c) (rest RE)) fin fin) 
-                   (nfa-seq (rest RE) res 
+                                        (append '(x) (rest RE)) fin fin) 
+                   (nfa-seq (rest RE) escape 
                                (cond ((eql (first(first RE)) 'seq)
                                       (+ ini (conta-stati(first RE))))
                                      (T (+ ini 3))) 
                                (+ fin (conta-stati (first RE))))))))
 
-;;creazione or
-(defun nfa-or (RE res ini fin)
-  (cond ((and(eql RE nil) (eql res nil)) (nfa-comp RE res (+ ini 3) fin))
+;;;creazione or
+(defun nfa-or (RE escape ini fin)
+  (cond ((and(eql RE nil) (eql escape nil)) (nfa-comp RE escape (+ ini 3) fin))
         ;;esco dalla ricorsione
-        ((and(eql RE nil) (not(eql res nil))) '())
+        ((and(eql RE nil) (not(eql escape nil))) '())
         ;;riconosciuto atomo, creazione parte di automa 
         ((atom (first RE)) 
          (append(list (nfa-epsilon ini (+ fin 1)) 
                       (nfa-epsilon (+ fin 2) (+ ini 3)) 
                       (nfa-atom (first RE) (+ fin 1))) 
-                (nfa-or (rest RE) res ini (cond ((equal fin ini) (+ fin 3))
+                (nfa-or (rest RE) escape ini (cond ((equal fin ini) (+ fin 3))
                                                  (T (+ fin 2))))))
+        ;;creazione parte di automa
         ((and(not(eql(first(first RE)) 'star)) 
              (not(eql(first(first RE)) 'seq)) 
              (not(eql(first(first RE)) 'or)) 
@@ -133,30 +135,34 @@
          (append(list (nfa-epsilon ini (+ fin 1)) 
                       (nfa-epsilon (+ fin 2) (+ ini 3)) 
                       (nfa-atom (first RE) (+ fin 1))) 
-                (nfa-or (rest RE) res ini (+ fin 3))))
+                (nfa-or (rest RE) escape ini (+ fin 3))))
+        ;;richiamo nfa-comp con il carattere di escape e proseguo con la seq
         (T(append (list(list 'delta (cond((eql (first(first RE)) 'seq)
                                           (+ fin (conta-stati(first RE))))
                                          (T (+ fin 3))) 'epsilon (+ ini 3)))
                   (nfa-comp (first RE) 
-                                      (append '(c) (rest RE)) 
+                                      (append '(x) (rest RE)) 
                                        ini  
                                        fin )
-                  (nfa-or (rest RE) res ini 
+                  (nfa-or (rest RE) escape ini 
                              (+ fin (conta-stati (first RE))))))))
 
 
-;;creazione star
-(defun nfa-star (RE res ini fin)
-  (cond ((and(eql RE nil) (eql res nil)) 
-         (nfa-comp RE res ini fin))
-        ((and(eql RE nil) (not(eql res nil))) '())
+;;;creazione star
+(defun nfa-star (RE escape ini fin)
+  (cond ((and(eql RE nil) (eql escape nil)) 
+         (nfa-comp RE escape ini fin))
+        ;;esco dalla ricorsione
+        ((and(eql RE nil) (not(eql escape nil))) '())
+        ;;riconosciuto atomo, creazione parte di automa 
         ((atom (first RE)) 
          (append (list (nfa-epsilon ini (+ fin 1))) 
                  (list (nfa-epsilon (+ fin 2) (+ ini 3))) 
                  (list (nfa-epsilon ini (+ ini 3)))
                  (list (nfa-epsilon (+ fin 2) (+ fin 1))) 
                  (list (nfa-atom (first RE) (+ fin 1)))
-                 (nfa-star (rest RE) res (+ ini 3) (+ ini 3))))
+                 (nfa-star (rest RE) escape (+ ini 3) (+ ini 3))))
+        ;;creazione parte di automa
         ((and(not(eql(first(first RE)) 'star)) 
              (not(eql(first(first RE)) 'seq)) 
              (not(eql(first(first RE)) 'or)) 
@@ -166,7 +172,8 @@
                  (list (nfa-epsilon ini (+ ini 3))) 
                  (list (nfa-epsilon (+ fin 2) (+ fin 1))) 
                  (list (nfa-atom (first RE) (+ fin 1)))
-                 (nfa-star (rest RE) res ( + ini 3) (+ ini 3))))
+                 (nfa-star (rest RE) escape ( + ini 3) (+ ini 3))))
+        ;;richiamo nfa-comp con il carattere di escape e proseguo con la seq
         (T(append (list (nfa-epsilon ini (+ fin 1))) 
                   (list (nfa-epsilon ini (+ (+ fin 1) (conta-stati (first RE )) 1))) 
                   (list(list 'delta (cond((eql (first(first RE)) 'seq)
@@ -175,21 +182,24 @@
                   (list(list 'delta (cond((eql (first(first RE)) 'seq)
                                           (+ (+ fin 1) (conta-stati(first RE))))
                                          (T (+ fin 4))) 'epsilon (+ fin 1)))
-                  (nfa-comp (first RE) (append '(c) (rest RE)) (+ fin 1) (+ fin 1))
-                  (nfa-star (rest RE) res (+ (+ fin 1) (conta-stati (first RE)) 1) (+ fin (conta-stati (first RE))))))))
+                  (nfa-comp (first RE) (append '(x) (rest RE)) (+ fin 1) (+ fin 1))
+                  (nfa-star (rest RE) escape (+ (+ fin 1) (conta-stati (first RE)) 1) (+ fin (conta-stati (first RE))))))))
 
 
-;;creazione plus
-(defun nfa-plus (RE res ini fin)
-  (cond ((and(eql RE nil) (eql res nil)) 
-         (nfa-comp RE res ini fin))
-        ((and(eql RE nil) (not(eql res nil))) '())
+;;;creazione plus
+(defun nfa-plus (RE escape ini fin)
+  (cond ((and(eql RE nil) (eql escape nil)) 
+         (nfa-comp RE escape ini fin))
+        ;;esco dalla ricorsione
+        ((and(eql RE nil) (not(eql escape nil))) '())
+        ;;riconosciuto atomo, creazione parte di automa 
         ((atom (first RE)) 
          (append (list (nfa-epsilon ini (+ fin 1))) 
                  (list (nfa-epsilon (+ fin 2) (+ ini 3)))  
                  (list (nfa-epsilon (+ fin 2) (+ fin 1))) 
                  (list(nfa-atom (first RE) (+ fin 1)))
-                 (nfa-plus (rest RE) res (+ ini 3) (+ ini 3))))
+                 (nfa-plus (rest RE) escape (+ ini 3) (+ ini 3))))
+        ;;creazione parte di automa
         ((and(not(eql(first(first RE)) 'star)) 
              (not(eql(first(first RE)) 'seq)) 
              (not(eql(first(first RE)) 'or)) 
@@ -198,7 +208,8 @@
                  (list (nfa-epsilon (+ fin 2) (+ ini 3)))  
                  (list (nfa-epsilon (+ fin 2) (+ fin 1))) 
                  (list(nfa-atom (first RE) (+ fin 1)))
-                 (nfa-plus (rest RE) res (+ ini 3) (+ ini 3))))
+                 (nfa-plus (rest RE) escape (+ ini 3) (+ ini 3))))
+         ;;richiamo nfa-comp con il carattere di escape e proseguo con la seq
         (T(append (list (nfa-epsilon ini (+ fin 1))) 
                   (list(list 'delta (cond((eql (first(first RE)) 'seq)
                                           (+ (+ fin 1) (conta-stati(first RE))))
@@ -206,57 +217,64 @@
                   (list(list 'delta (cond((eql (first(first RE)) 'seq)
                                           (+ (+ fin 1) (conta-stati(first RE))))
                                          (T (+ fin 4))) 'epsilon (+ fin 1)))
-                  (nfa-comp (first RE) (append '(c) (rest RE)) (+ fin 1) (+ fin 1))
-                  (nfa-plus (rest RE) res ini (+ (+ fin (conta-stati (first RE)) 1) (+ fin (conta-stati (first RE)))))))))
+                  (nfa-comp (first RE) (append '(x) (rest RE)) (+ fin 1) (+ fin 1))
+                  (nfa-plus (rest RE) escape ini (+ (+ fin (conta-stati (first RE)) 1) (+ fin (conta-stati (first RE)))))))))
 
-;;conteggio stati 
+;;;conteggio stati 
 (defun conta-stati (RE)
   (cond ((eql RE nil) 0)
         ((and (atom RE) (not(eql RE 'seq)) (not (eql RE 'or)) (not (eql RE 'star)) (not (eql RE 'plus ))) 2)
+        ;;seq necessita di 1 stato
         ((and(eql (first RE) 'seq)(eql(rest RE) nil))1)
-        ((and(eql (first RE) 'or)(eql(rest RE) nil))1)
-        ((and(atom (first RE))(eql (rest RE) nil)) 2)
         ((eql (first RE) 'seq)  (+ (conta-stati (first (rest RE))) (conta-stati (append '(seq)(rest (rest RE))))))
+        ;;or necessita di 1 stato
+        ((and(eql (first RE) 'or)(eql(rest RE) nil))1)
         ((eql (first RE) 'or)  (+ (conta-stati (first (rest RE))) (conta-stati (append '(or) (rest (rest RE))))))
-        ((and (eql (first RE) 'star) (atom (second RE))) 3)
+        ;;un aotmo necessita di 1 stato
+        ((and(atom (first RE))(eql (rest RE) nil)) 2)
+        ;;star necessita di 3 stati
+       	((and (eql (first RE) 'star) (atom (second RE))) 3)
         ((eql (first RE) 'star) (+ (conta-stati (first (rest RE))) 2))
+        ;;plus necessita di 2 stati
         ((and (eql (first RE) 'plus) (atom (second RE))) 3)
         ((eql (first RE) 'plus) (+ (conta-stati (first (rest RE))) 2))))
 
-;;funzione test
-(defun nfa-test (fa in)
-  (cond ((not (is-automa fa nil)) (error "~S is not a Finite State Automata." fa))
-        (T (nfa-subtest fa fa in (list-test fa fa 'initial nil nil)))))
+;;;funzione test
+(defun nfa-test (FA Input)
+  (cond ((not (is-automa FA nil)) (error "~S is not a Finite State Automata." FA))
+        (T (nfa-subtest FA FA Input (list-test FA FA 'initial nil nil)))))
 
-;;controllo presenza initial, delta, final
-(defun list-test (fa fas in ins n)
-  (cond ((and (eql fas nil) (eql (first ins ) 'epsilon)) T)
-        ((eql fas nil) nil)
-        ((eql in 'initial) (cond ((eql (first(first fas)) 'initial) (second(first fas)))
-                                 (T(list-test fa (rest fas) 'final ins n))))
-        ((eql in 'final) (cond ((eql (first(first fas)) 'final) (eql (second(first fas)) n))
-                               (T(list-test fa (rest fas) 'final ins n))))
+;;;controllo presenza epsilon, delta, final
+(defun list-test (FA FAs Input elem v)
+  (cond ((and (eql FAs nil) (eql (first elem ) 'epsilon)) T)
+        ((eql FAs nil) nil)
+        ((eql Input 'initial) (cond ((eql (first(first FAs)) 'initial) (second(first FAs)))
+                                 (T(list-test FA (rest FAs) 'final elem v))))
+        ((eql Input 'final) (cond ((eql (first(first FAs)) 'final) (eql (second(first FAs)) v))
+                               (T(list-test FA (rest FAs) 'final elem v))))
 
-        ((eql in 'epsilon)
-         (cond ((and (eql (second(first fas)) n)(eql (third(first fas)) 'epsilon)) (or(nfa-subtest fa fa ins (fourth(first fas))) (nfa-subtest fa (rest fas)ins n)))
-               (T(list-test fa (rest fas) in ins n))))
-        (T(cond ((and (eql (second (first fas)) n)(equal (third(first fas)) in)) (nfa-subtest fa fa ins (fourth(first fas))))
-                (T(list-test fa (rest fas) in ins n))))))
+        ((eql Input 'epsilon)
+         (cond ((and (eql (second(first FAs)) v)(eql (third(first FAs)) 'epsilon)) (or(nfa-subtest FA FA elem (fourth(first FAs))) (nfa-subtest FA (rest FAs elem v)))
+               (T(list-test FA (rest FAs) Input elem v))))
+        (T(cond ((and (eql (second (first FAs)) v)(equal (third(first FAs)) Input)) (nfa-subtest FA FA elem (fourth(first FAs))))
+                (T(list-test FA (rest FAs) Input elem v))))))
 
-;;controllo che sia un automa
-(defun is-automa ( fa n)
-  (cond ((and(eql fa nil) (eql n nil)) nil)
-         ((and (eql fa nil) (eql n 1))T)
-         ((atom fa) nil)
-         ((atom (first fa)) nil)
-         ((eql (first (first fa)) 'initial) (is-automa (rest fa) 1))
-         ((eql (first (first fa)) 'delta) (is-automa (rest fa) 1))
-         ((eql (first(first fa)) 'final) (is-automa (rest fa) 1))))
+;;;controllo che sia un automa
+(defun is-automa (FA escape)
+  (cond ((and(eql FA nil) (eql escape nil)) nil)
+         ;;se ho letto tutto l'automa e ha riconosciuto i caratteri torna T
+         ((and (eql FA nil) (not(eql escape nil)))T)
+         ((atom FA) nil)
+         ((atom (first FA)) nil)
+         ;;controllo la presenza delle 3 parole
+         ((eql (first (first FA)) 'initial) (is-automa (rest FA) '(x)))
+         ((eql (first (first FA)) 'delta) (is-automa (rest FA) '(x)))
+         ((eql (first(first FA)) 'final) (is-automa (rest FA) '(x)))))
 
-;;ricorsione test
-(defun nfa-subtest (fa fas in n)
-  (cond ((and (eql in nil)(list-test fa fa 'epsilon '(epsilon) n) (list-test fa fa 'final nil n))T)
-        (T(or(list-test fa fas (first in) (rest in)n) (list-test fa fas 'epsilon in n)))))
+;;;ricorsione test
+(defun nfa-subtest (FA FAs Input v)
+  (cond ((and (eql Input nil)(list-test FA FA 'epsilon '(epsilon) v) (list-test FA FA 'final nil v))T)
+        (T(or(list-test FA FAs (first Input) (rest Input)v) (list-test FA FAs 'epsilon Input v)))))
 
                             
         
