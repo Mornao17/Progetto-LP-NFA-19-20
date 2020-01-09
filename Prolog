@@ -1,64 +1,68 @@
 %%%% Romano Matteo 807442
 %%%% Cantoni Matteo 808104
 
-%%%Implementazione predicato is_regexp(RE)
-%%%Caso dove RE è un atomo
+%%% Implementazione predicato is_regexp(RE)
+%%% Caso dove RE è un atomo
 is_regexp(RE):-
     atomic(RE), !.
 
-%%%Caso di una RE valida
+%%% Caso di una RE valida non atomica
 is_regexp(RE):-
     RE=.. [Funz | Simb],
+    %% Controllo ricorsivamente RE
     controllo_re(Funz, Simb), !.
 
-%%%Caso dove RE è una lista vuota
+%%% Caso dove RE è una lista vuota
 controllo_re([], _).
 
-%%%Caso ultimo elemento di RE sia atomic
+%%% Caso dove ultimo elemento di RE sia atomic
 controllo_re(Atom, []):-
     atomic(Atom).
 
-%%%Caso primo elemento di RE sia atomic
+%%% Caso dove primo elemento di RE sia atomic
 controllo_re(Atom, Simb):-
     atomic(Atom),
     Simb = [X | Xs],
     controllo_re(X, Xs).
 
-%%%Caso seq RE
+%%% Caso dove primo elemento di RE sia funtore seq
 controllo_re(seq, Simb):-
     Simb = [X | Xs],
     controllo_re(X, Xs).
 
-%%%Caso or RE
+%%% Caso dove primo elemento di RE sia funtore or
 controllo_re(or, Simb):-
     Simb = [X | Xs],
     controllo_re(X, Xs).
 
-%%%Caso star RE
+%%% Caso dove primo elemento di RE sia funtore star
 controllo_re(star, Simb):-
     Simb = [X | Xs],
+    %%controllo che arietà sia 1
     Xs=[],
     X=.. [X1 |X2],
     controllo_re(X1, X2).
 
-%%%Caso plus RE
+%%% Caso dove primo elemento di RE sia funtore plus
 controllo_re(plus, Simb):-
     Simb = [X | Xs],
+    %%controllo che arietà sia 1
     Xs=[],
     X=.. [X1 |X2],
     controllo_re(X1, X2).
 
-%%%Caso compound RE
+%%% Caso ultimo elemento di RE sia compound/1
 controllo_re(Funz, []):-
     compound(Funz), !.
 
+%%% Caso primo elemento di RE sia compound/1
 controllo_re(Funz, Simb):-
     compound(Funz),
     Simb=[X | Xs],
     controllo_re(X, Xs).
 
-%%%Implementazione predicati nfa_clear() e nfa_clear(FA_Id)
-%%% Caso nfa_clear(), rimuovo dalla base di dati tutti gli automi
+%%% Implementazione predicati nfa_clear/0 e nfa_clear/1
+%%% Caso nfa_clear/0, rimuovo dalla base di dati tutti gli automi
 %%% definiti
 nfa_clear() :-
     abolish(nfa_initial/2),
@@ -66,129 +70,162 @@ nfa_clear() :-
     abolish(nfa_delta/4),
     abolish(fa_id/1), !.
 
-%%%Caso nfa_clear(FA_Id), rimuovo dalla base di dati l'automa FA_Id
+%%% Caso nfa_clear/1, rimuovo dalla base di dati l'automa FA_Id
 nfa_clear(FA_Id) :-
     retractall(nfa_initial(FA_Id, _)),
     retractall(nfa_final(FA_Id, _)),
     retractall(nfa_delta(FA_Id, _, _, _)),
     retractall(fa_id(FA_Id)), !.
 
-%%%Implementazione predicati nfa_list() e nfa_list(FA_Id)
-%%%Caso nfa_list(), listo tutti gli automi definiti nella base di dati
+%%% Implementazione predicati nfa_list/0 e nfa_list/1
+%%% Caso nfa_list/0, listo tutti gli automi definiti nella base di dati
 nfa_list() :-
     listing(nfa_initial/2),
     listing(nfa_final/2),
     listing(nfa_delta/4), !.
 
-%%%Caso nfa_list(FA_Id), listo l'automa FA_Id definito nella base di
-%%%dati
+%%% Caso nfa_list/1, listo l'automa FA_Id definito nella base di
+%%% dati
 nfa_list(FA_Id) :-
     listing(nfa_initial(FA_Id, _)),
     listing(nfa_final(FA_Id, _)),
     listing(nfa_delta(FA_Id, _, _, _)), !.
 
-%%%Implementazione predicato nfa_test(FA_Id, Input)
-%%%Verifico che l'Input sia consumato completamente dall'automa FA_Id
+%%% Implementazione predicato nfa_test(FA_Id, Input)
+%%% Verifico che l'Input sia consumato completamente dall'automa FA_Id
 nfa_test(FA_Id, Input) :-
     nfa_initial(FA_Id, Start),
     accept(FA_Id, Input, Start), !.
 
-%%%Verifico di essere in uno stato finale quando esaurisco l'Input
+%%% Verifico di essere in uno stato finale quando esaurisco l'Input
 accept(FA_Id, [], End) :-
     nfa_final(FA_Id, End).
 
-%%%Passaggio con l'Input
+%%% Passaggio con l'Input
 accept(FA_Id, [I | Is], Start) :-
     nfa_delta(FA_Id, Start, I, End),
     accept(FA_Id, Is, End).
 
-%%%Passaggio per epsilon
+%%% Passaggio per epsilon
 accept(FA_Id, I, Start) :-
     nfa_delta(FA_Id, Start, epsilon, End),
     accept(FA_Id, I, End).
 
-%%%Controllo che non sia presente un automa nella base di dati con lo
-%%%stesso FA_Id
+%%% Controllo che non sia presente un automa nella base di dati con lo
+%%% stesso FA_Id
 nfa_regexp_comp(FA_Id, _) :-
     clause(fa_id(FA_Id), _),
     writeln("FA_Id già usato, usare un altro ID"), !,
     fail.
 
-%%%Implementazione predicato nfa_regexp_comp(FA_Id, RE)
+%%% Implementazione predicato nfa_regexp_comp(FA_Id, RE)
 nfa_regexp_comp(FA_Id, RE) :-
     is_regexp(RE),
+    %% Aggiungo alla base di dati l'ID dell'automa per non permettere di
+    %% creare un automa con lo stesso ID
     assertz(fa_id(FA_Id)),
+    %% Creo stato iniziale e stato finale e li aggiungo alla base di dati
     gensym(q, Start),
     assertz(nfa_initial(FA_Id, Start)),
     gensym(q, End),
     assertz(nfa_final(FA_Id, End)),
     RE =.. [Funz | Simb],
+    %% Creo la struttura interna dell'automa
     nfa_compilazione(FA_Id, Funz, Simb, Start, End), !.
 
-%%%nfa_compilazione(FA_Id, Funz, Simb, Initial, Final), predicato di
-%%%supporto
-%%%Caso di Simb atomico
+%%% nfa_compilazione(FA_Id, Funz, Simb, Initial, Final)
+%%% Predicato di supporto che crea la struttura interna dell'automa
+%%% Caso base dove Simb è atomico
 nfa_compilazione(FA_Id, Simb, [], Start, End) :-
     atomic(Simb),
     assertz(nfa_delta(FA_Id, Start, Simb, End)).
 
-%%%Caso Funz=seq, chiamata ricorsiva su Simb
+%%% Caso dove Funz = seq, caso base
+nfa_compilazione(FA_Id, seq, Simb, Start, End) :-
+    Simb=[X|Xs],
+    Xs=[],
+    X=..[X1|X2],
+    %% Creo stato di passaggio
+    gensym(q, Passaggio),
+    %% Creo ricorsivamente la prima parte dell'automa su Simb
+    nfa_compilazione(FA_Id, X1, X2, Start, Passaggio),
+    %% Collego la prima parte dell'automa con lo stato finale
+    assertz(nfa_delta(FA_Id, Passaggio, epsilon, End)).
+
+%%% Caso dove Funz = seq, chiamata ricorsiva su Simb
 nfa_compilazione(FA_Id, seq, Simb, Start, End) :-
     Simb=[X|Xs],
     X=..[X1|X2],
     Xs\=[],
+    %% Creo stati di passaggio
     gensym(q, Inizio),
     gensym(q, Fine),
+    %% Creo ricorsivamente la prima parte dell'automa
     nfa_compilazione(FA_Id, X1, X2, Start, Fine),
+    %% Collego la prima parte dell'automa con la seconda parte
+    %% della seq
     assertz(nfa_delta(FA_Id, Fine, epsilon, Inizio)),
+    %% Creo ricorsivamente la seconda parte della seq
     nfa_compilazione(FA_Id, seq, Xs, Inizio, End).
 
-%%%Caso Funz=seq, caso finale
-nfa_compilazione(FA_Id, seq, Simb, Start, End) :-
+%%% Caso dove Funz = or, caso base
+nfa_compilazione(FA_Id, or, Simb, Start, End) :-
     Simb=[X|Xs],
     Xs=[],
     X=..[X1|X2],
+    %% Creo stato di passaggio
     gensym(q, Passaggio),
+    %% Creo ricorsivamente la prima parte dell'automa su Simb
     nfa_compilazione(FA_Id, X1, X2, Start, Passaggio),
+    %% Collego la prima parte dell'automa con lo stato finale
     assertz(nfa_delta(FA_Id, Passaggio, epsilon, End)).
 
-%%%Caso Funz=or, chiamata ricorsiva su Simb
+%%% Caso dove Funz = or, chiamata ricorsiva su Simb
 nfa_compilazione(FA_Id, or, Simb, Start, End) :-
     Simb=[X|Xs],
     X=..[X1|X2],
     Xs\=[],
+    %% Creo stato di passaggio
     gensym(q, Passaggio),
+    %% Creo ricorsivamente la prima parte dell'automa
     nfa_compilazione(FA_Id, X1, X2, Start, Passaggio),
+    %% Collego la prima parte dell'automa con lo stato finale
     assertz(nfa_delta(FA_Id, Passaggio, epsilon, End)),
+    %% Creo ricorsivamente la seconda parte dell'or
     nfa_compilazione(FA_Id, or, Xs, Start, End).
 
-%%%Caso Funz=or, caso finale
-nfa_compilazione(FA_Id, or, Simb, Start, End) :-
-    Simb=[X|Xs],
-    Xs=[],
-    X=..[X1|X2],
-    gensym(q, Passaggio),
-    nfa_compilazione(FA_Id, X1, X2, Start, Passaggio),
-    assertz(nfa_delta(FA_Id, Passaggio, epsilon, End)).
-
-%%%Caso Funz=star
+%%% Caso dove Funz = star
 nfa_compilazione(FA_Id, star, Simb, Start, End) :-
     Simb=[X],
     X=..[X1|X2],
+    %% Creo stato di passaggio
     gensym(q, Passaggio),
+    %% Creo la struttura interna dell'automa
     nfa_compilazione(FA_Id, X1, X2, Start, Passaggio),
+    %% Collego i vari stati in modo da creare il funtore star
+    %% Collego la fine della struttura interna dell'automa
+    %% allo stato finale
     assertz(nfa_delta(FA_Id, Passaggio, epsilon, End)),
+    %% Collego la fine della struttura interna dell'automa
+    %% allo stato iniziale
     assertz(nfa_delta(FA_Id, Passaggio, epsilon, Start)),
+    %% Collego lo stato iniziale con lo stato finale dell'automa
     assertz(nfa_delta(FA_Id, Start, epsilon, End)).
 
-%%%Caso Funz=plus
+%%% Caso dove Funz = plus
 nfa_compilazione(FA_Id, plus, Simb, Start, End) :-
     Simb=[X],
     X=..[X1|X2],
+    %% Creo la struttura interna dell'automa
     nfa_compilazione(FA_Id, X1, X2, Start, End),
+    %% Collego i vari stati in modo da creare iil funtore plus
+    %% Collego lo stato finale con lo stato iniziale
     assertz(nfa_delta(FA_Id, End, epsilon, Start)).
 
-%%%Caso di compound
+%%% Caso di compound
 nfa_compilazione(FA_Id, Funz, Simb, Start, End) :-
+    %% In quanto separo la funzione dai suoi simboli prima della
+    %% chiamata, devo riunrli prima di aggiungere la delta alla
+    %% base di conoscenza
     X=..[Funz | Simb],
     assertz(nfa_delta(FA_Id, Start, X, End)).
