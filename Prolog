@@ -1,4 +1,5 @@
-%%%%Progetto Espressioni Regolari
+%%%% Romano Matteo 807442
+%%%% Cantoni Matteo 808104
 
 %%%Implementazione predicato is_regexp(RE)
 %%%Caso dove RE è un atomo
@@ -50,7 +51,7 @@ controllo_re(plus, Simb):-
 %%%Caso compound RE
 controllo_re(Funz, []):-
     compound(Funz), !.
-    
+
 controllo_re(Funz, Simb):-
     compound(Funz),
     Simb=[X | Xs],
@@ -96,7 +97,7 @@ nfa_test(FA_Id, Input) :-
 accept(FA_Id, [], End) :-
     nfa_final(FA_Id, End).
 
-%%%Passaggio con l'Input 
+%%%Passaggio con l'Input
 accept(FA_Id, [I | Is], Start) :-
     nfa_delta(FA_Id, Start, I, End),
     accept(FA_Id, Is, End).
