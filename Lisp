@@ -78,11 +78,11 @@
 
 ;;atomo
 (defun nfa-atom (RE s)
-  (list  s re (+ s 1)))
+  (list  'delta s re (+ s 1)))
 
 ;;epsilon  mossa
 (defun nfa-epsilon (ini fin)
-  (list ini 'epsilon fin))
+  (list 'delta ini 'epsilon fin))
 
 
 
@@ -130,7 +130,7 @@
                       (nfa-epsilon (+ fin 2) (+ ini 3)) 
                       (nfa-atom (first RE) (+ fin 1))) 
                 (nfa-or (rest RE) res ini (+ fin 3))))
-        (T(append (list(list  (cond((eql (first(first RE)) 'seq)
+        (T(append (list(list 'delta (cond((eql (first(first RE)) 'seq)
                                           (+ fin (conta-stati(first RE))))
                                          (T (+ fin 3))) 'epsilon (+ ini 3)))
                   (nfa-comp (first RE) 
@@ -144,7 +144,7 @@
 ;;creazione star
 (defun nfa-star (RE res ini fin)
   (cond ((and(eql RE nil) (eql res nil)) 
-         (nfa-comp RE res (+ ini 3) fin))
+         (nfa-comp RE res ini fin))
         ((and(eql RE nil) (not(eql res nil))) '())
         ((atom (first RE)) 
          (append (list (nfa-epsilon ini (+ fin 1))) 
@@ -152,7 +152,7 @@
                  (list (nfa-epsilon ini (+ ini 3)))
                  (list (nfa-epsilon (+ fin 2) (+ fin 1))) 
                  (list (nfa-atom (first RE) (+ fin 1)))
-                 (nfa-star (rest RE) res ini (+ ini 3))))
+                 (nfa-star (rest RE) res (+ ini 3) (+ ini 3))))
         ((and(not(eql(first(first RE)) 'star)) 
              (not(eql(first(first RE)) 'seq)) 
              (not(eql(first(first RE)) 'or)) 
@@ -162,30 +162,30 @@
                  (list (nfa-epsilon ini (+ ini 3))) 
                  (list (nfa-epsilon (+ fin 2) (+ fin 1))) 
                  (list (nfa-atom (first RE) (+ fin 1)))
-                 (nfa-star (rest RE) res ini (+ ini 3))))
+                 (nfa-star (rest RE) res ( + ini 3) (+ ini 3))))
         (T(append (list (nfa-epsilon ini (+ fin 1))) 
-                  (list (nfa-epsilon ini (+ ini 3))) 
-                  (list(list (cond((eql (first(first RE)) 'seq)
+                  (list (nfa-epsilon ini (+ (+ fin 1) (conta-stati (first RE )) 1))) 
+                  (list(list 'delta (cond((eql (first(first RE)) 'seq)
                                           (+ (+ fin 1) (conta-stati(first RE))))
-                                         (T (+ fin 4))) 'epsilon (+ ini 3)))
-                  (list(list (cond((eql (first(first RE)) 'seq)
+                                         (T (+ fin 4))) 'epsilon (+ (+ fin 1) (conta-stati (first RE )) 1)))
+                  (list(list 'delta (cond((eql (first(first RE)) 'seq)
                                           (+ (+ fin 1) (conta-stati(first RE))))
                                          (T (+ fin 4))) 'epsilon (+ fin 1)))
                   (nfa-comp (first RE) (append '(c) (rest RE)) (+ fin 1) (+ fin 1))
-                  (nfa-star (rest RE) res ini (+ fin (conta-stati (first RE))))))))
+                  (nfa-star (rest RE) res (+ (+ fin 1) (conta-stati (first RE)) 1) (+ fin (conta-stati (first RE))))))))
 
 
 ;;creazione plus
 (defun nfa-plus (RE res ini fin)
   (cond ((and(eql RE nil) (eql res nil)) 
-         (nfa-comp RE res (+ ini 3) fin))
+         (nfa-comp RE res ini fin))
         ((and(eql RE nil) (not(eql res nil))) '())
         ((atom (first RE)) 
          (append (list (nfa-epsilon ini (+ fin 1))) 
                  (list (nfa-epsilon (+ fin 2) (+ ini 3)))  
                  (list (nfa-epsilon (+ fin 2) (+ fin 1))) 
                  (list(nfa-atom (first RE) (+ fin 1)))
-                 (nfa-plus (rest RE) res ini (+ ini 3))))
+                 (nfa-plus (rest RE) res (+ ini 3) (+ ini 3))))
         ((and(not(eql(first(first RE)) 'star)) 
              (not(eql(first(first RE)) 'seq)) 
              (not(eql(first(first RE)) 'or)) 
@@ -194,16 +194,16 @@
                  (list (nfa-epsilon (+ fin 2) (+ ini 3)))  
                  (list (nfa-epsilon (+ fin 2) (+ fin 1))) 
                  (list(nfa-atom (first RE) (+ fin 1)))
-                 (nfa-plus (rest RE) res ini (+ ini 3))))
+                 (nfa-plus (rest RE) res (+ ini 3) (+ ini 3))))
         (T(append (list (nfa-epsilon ini (+ fin 1))) 
-                  (list(list (cond((eql (first(first RE)) 'seq)
+                  (list(list 'delta (cond((eql (first(first RE)) 'seq)
                                           (+ (+ fin 1) (conta-stati(first RE))))
-                                         (T (+ fin 4))) 'epsilon (+ ini 3)))
-                  (list(list (cond((eql (first(first RE)) 'seq)
+                                         (T (+ fin 4))) 'epsilon (+ (+ fin 1) (conta-stati (first RE)) 1)))
+                  (list(list 'delta (cond((eql (first(first RE)) 'seq)
                                           (+ (+ fin 1) (conta-stati(first RE))))
                                          (T (+ fin 4))) 'epsilon (+ fin 1)))
                   (nfa-comp (first RE) (append '(c) (rest RE)) (+ fin 1) (+ fin 1))
-                  (nfa-plus (rest RE) res ini (+ fin (conta-stati (first RE))))))))
+                  (nfa-plus (rest RE) res ini (+ (+ fin (conta-stati (first RE)) 1) (+ fin (conta-stati (first RE)))))))))
 
          
 
@@ -221,5 +221,37 @@
         ((eql (first RE) 'star) (+ (conta-stati (first (rest RE))) 2))
         ((and (eql (first RE) 'plus) (atom (second RE))) 3)
         ((eql (first RE) 'plus) (+ (conta-stati (first (rest RE))) 2))))
+
+(defun nfa-test (fa in)
+  (cond ((not (is-automa fa nil)) (error "~S is not a Finite State Automata." fa))
+        (T (nfa-subtest fa fa in (list-test fa fa 'initial nil nil)))))
+
+(defun list-test (fa fas in ins n)
+  (cond ((and (eql fas nil) (eql (first ins ) 'epsilon)) T)
+        ((eql fas nil) nil)
+        ((eql in 'initial) (cond ((eql (first(first fas)) 'initial) (second(first fas)))
+                                 (T(list-test fa (rest fas) 'final ins n))))
+        ((eql in 'final) (cond ((eql (first(first fas)) 'final) (eql (second(first fas)) n))
+                               (T(list-test fa (rest fas) 'final ins n))))
+
+        ((eql in 'epsilon)
+         (cond ((and (eql (second(first fas)) n)(eql (third(first fas)) 'epsilon)) (or(nfa-subtest fa fa ins (fourth(first fas))) (nfa-subtest fa (rest fas)ins n)))
+               (T(list-test fa (rest fas) in ins n))))
+        (T(cond ((and (eql (second (first fas)) n)(equal (third(first fas)) in)) (nfa-subtest fa fa ins (fourth(first fas))))
+                (T(list-test fa (rest fas) in ins n))))))
+
+(defun is-automa ( fa n)
+  (cond ((and(eql fa nil) (eql n nil)) nil)
+         ((and (eql fa nil) (eql n 1))T)
+         ((atom fa) nil)
+         ((atom (first fa)) nil)
+         ((eql (first (first fa)) 'initial) (is-automa (rest fa) 1))
+         ((eql (first (first fa)) 'delta) (is-automa (rest fa) 1))
+         ((eql (first(first fa)) 'final) (is-automa (rest fa) 1))))
+
+(defun nfa-subtest (fa fas in n)
+  (cond ((and (eql in nil)(list-test fa fa 'epsilon '(epsilon) n) (list-test fa fa 'final nil n))T)
+        (T(or(list-test fa fas (first in) (rest in)n) (list-test fa fas 'epsilon in n)))))
+
                             
         
