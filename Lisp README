@@ -1,1 +1,67 @@
+Romano Matteo 807442
+Bacciocchi Matteo 807253
+Casiraghi Fabio 807398
 
+
+LINGUAGGI DI PROGRAMMAZIONE - AA 2018-2019 - COMMON LISP - FEBBRAIO 2019
+
+------------------------- FUNZIONI PRIMITIVE -----------------------------------
+
+DEF-CLASS: Prende in input un nome, una lista di superclassi e opzionalmente
+una serie di parametri che a coppie rappresentano il nome e il valore di uno
+slot di classe. Ritorna il nome della classe definita. Per vedere la
+definizione di una classe usare (get-class-spec 'nome-classe).
+Genera errore se i parametri opzionali sono dispari, poichè non sarebbe
+possibile creare le coppie di slot, e se la classe è già stata definita, perchè
+si perderebbero i riferimenti delle istanze eventualmente già create.
+
+NEW: Prende in input un nome di classe e una serie di valori opzionali che
+vanno a ridefinire i valori di default della classe per questa istanza. Ritorna
+una lista di tipo (oolinst <classe> <chiave-valore>*), gli slot presenti sono
+solamente quelli ridefiniti.
+
+GETVX: Prende in input un'istanza e una serie chiavi di slot, ed accede in
+sequenza alle chiavi partendo dall'istanza. Ritorna il valore associato all'
+ultima chiave passata come valore. Genera errore se una delle chiavi non viene
+ritrovata.
+
+GETV: Prende in input un'istanza e una chiave e ritorna il valore associato a
+quella chiave presente nell'istanza. Se lo slot non è stato ridefinito all'
+interno dell'istanza, va a recuperare il primo valore di default presente nel
+grafo delle superclassi, secondo una strategia depth-first. Genera errore se non
+è possibile recuperare lo slot con la chiave passata.
+
+---------------- FUNZIONI PER LA DEFINIZIONE DEI METODI ------------------------
+
+PROCESS-METHOD: Prende in input un nome di metodo e le specifiche del suddetto
+metodo e assegna al nome del metodo una funzione lambda che applica il corpo del
+metodo con lo stesso nome recuperato all'interno dell'istanza (passata tramite
+'this'), successivamente richiama la rewrite-method-code.
+
+REWRITE-METHOD-CODE: Prende in input il nome di un metodo e le sue specifiche
+e ritorna le specifiche riscritte sottoforma di lambda e aggiunge tra i
+parametri richiesti un 'this'.
+
+------------------------------FUNZIONI D'APPOGGIO ------------------------------
+
+CREATE-SLOTS: Prende in input una lista di parametri singoli e ritorna una lista
+di coppie chiave-valore associando in maniera sequenziale i parametri passati a
+2 a 2. Viene richiamata all'interno della def-class e new per generare la lista
+degli slot.
+
+INSTALL-METHODS: Prende in input una lista di slot chiave-valore e li scorre,
+quando si trova in presenza di un metodo lo processa (tramite chiamata alla
+process-method) e sostituisce il vecchio valore del metodo con la sua
+riscrittura sotto forma di lambda. Viene chiamata all'interno della def-class e
+della new una volta che la lista degli slot è stata creata.
+
+FIND-SLOT: Prende in input il nome di uno slot e una lista di slot e ritorna
+lo slot il cui nome combacia con il nome passato come parametro. Se non trova lo
+slot ritorna nil.Viene chiamata all'interno della getv e find-slot-class.
+
+FIND-SLOT-CLASS: Prende in input il nome di uno slot e una lista di classi,
+ritorna il primo slot trovato il cui nome combacia con quello passato come
+parametro, scorrendo il grafo delle classi partendo dalla prima a sinistra.
+Viene usato all'interno della getv per la ricerca dei valori che non sono stati
+ridefiniti all'interno di un'istanza (quindi quelli di default delle classi
+parenti).
